@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Extractor</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-area small {
+            color: #999;
+            display: block;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-list {
+            margin-bottom: 20px;
+        }
+
+        .file-item {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .file-item .remove-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .file-item .remove-btn:hover {
+            background: #ff5252;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-upload {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-upload:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-upload:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-clear {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-clear:hover {
+            background: #d0d0d0;
+        }
+
+        .status {
+            background: #f0f2ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.processing {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .status.completed {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .status-message {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .results {
+            background: #f9f9f9;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .results-list {
+            list-style: none;
+        }
+
+        .results-list li {
+            padding: 8px;
+            background: white;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+            padding-left: 12px;
+        }
+
+        .results-folder {
+            margin-bottom: 15px;
+        }
+
+        .results-folder-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function ResumeExtractor() {
+            const [files, setFiles] = useState([]);
+            const [status, setStatus] = useState('idle');
+            const [message, setMessage] = useState('');
+            const [progress, setProgress] = useState(0);
+            const [extracted, setExtracted] = useState(0);
+            const [results, setResults] = useState({});
+            const [errors, setErrors] = useState([]);
+            const [dragOver, setDragOver] = useState(false);
+
+            useEffect(() => {
+                if (status === 'processing') {
+                    const interval = setInterval(async () => {
+                        try {
+                            const response = await fetch('http://localhost:5000/api/status');
+                            const data = await response.json();
+                            setStatus(data.status);
+                            setMessage(data.message);
+                            setProgress(data.progress);
+                            setExtracted(data.extracted);
+
+                            if (data.status === 'completed') {
+                                fetchResults();
+                                setErrors(data.errors || []);
+                                clearInterval(interval);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching status:', error);
+                        }
+                    }, 500);
+
+                    return () => clearInterval(interval);
+                }
+            }, [status]);
+
+            const handleFileSelect = (e) => {
+                const selectedFiles = Array.from(e.target.files);
+                setFiles([...files, ...selectedFiles]);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setDragOver(true);
+            };
+
+            const handleDragLeave = () => {
+                setDragOver(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const droppedFiles = Array.from(e.dataTransfer.files);
+                setFiles([...files, ...droppedFiles]);
+            };
+
+            const removeFile = (index) => {
+                setFiles(files.filter((_, i) => i !== index));
+            };
+
+            const handleUpload = async () => {
+                if (files.length === 0) {
+                    setMessage('Please select at least one file');
+                    setStatus('error');
+                    return;
+                }
+
+                const formData = new FormData();
+                files.forEach(file => {
+                    formData.append('files', file);
+                });
+
+                setStatus('processing');
+                setMessage('Uploading files...');
+                setProgress(0);
+
+                try {
+                    const response = await fetch('http://localhost:5000/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
+                    }
+
+                    const data = await response.json();
+                    setMessage('Processing started...');
+                } catch (error) {
+                    setStatus('error');
+                    setMessage('Error: ' + error.message);
+                }
+            };
+
+            const fetchResults = async () => {
+                try {
+                    const response = await fetch('http://localhost:5000/api/results');
+                    const data = await response.json();
+                    setResults(data);
+                } catch (error) {
+                    console.error('Error fetching results:', error);
+                }
+            };
+
+            const handleClear = () => {
+                setFiles([]);
+                setStatus('idle');
+                setMessage('');
+                setProgress(0);
+                setExtracted(0);
+                setResults({});
+                setErrors([]);
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>📄 Resume Extractor</h1>
+                        <p>Upload Excel files and extract resumes automatically</p>
+                    </div>
+
+                    <div
+                        className={`upload-area ${dragOver ? 'drag-over' : ''}`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => document.getElementById('fileInput').click()}
+                    >
+                        <div className="upload-icon">📁</div>
+                        <p>Drag and drop Excel files here or click to browse</p>
+                        <small>Supported formats: .xlsx, .xls</small>
+                        <input
+                            id="fileInput"
+                            type="file"
+                            multiple
+                            accept=".xlsx,.xls"
+                            onChange={handleFileSelect}
+                        />
+                    </div>
+
+                    {files.length > 0 && (
+                        <div className="file-list">
+                            <h3 style={{ marginBottom: '10px', color: '#333' }}>Selected Files ({files.length})</h3>
+                            {files.map((file, index) => (
+                                <div key={index} className="file-item">
+                                    <span>📄 {file.name}</span>
+                                    <button
+                                        className="remove-btn"
+                                        onClick={() => removeFile(index)}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="buttons">
+                        <button
+                            className="btn-upload"
+                            onClick={handleUpload}
+                            disabled={status === 'processing' || files.length === 0}
+                        >
+                            {status === 'processing' ? (
+                                <>
+                                    <span className="loading"></span> Processing...
+                                </>
+                            ) : (
+                                'Upload & Extract'
+                            )}
+                        </button>
+                        <button
+                            className="btn-clear"
+                            onClick={handleClear}
+                            disabled={status === 'processing'}
+                        >
+                            Clear
+                        </button>
+                    </div>
+
+                    {(status !== 'idle' || message) && (
+                        <div className={`status show ${status}`}>
+                            <div className="status-message">{message}</div>
+                            {status === 'processing' && (
+                                <>
+                                    <div className="progress-bar">
+                                        <div
+                                            className="progress-fill"
+                                            style={{ width: `${(progress / 100) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                    <small style={{ marginTop: '10px', display: 'block' }}>
+                                        Resumes extracted: {extracted}
+                                    </small>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {Object.keys(results).length > 0 && (
+                        <div className="results show">
+                            <h3>✅ Extracted Results</h3>
+                            {Object.entries(results).map(([folder, fileList]) => (
+                                <div key={folder} className="results-folder">
+                                    <div className="results-folder-name">{folder}</div>
+                                    <ul className="results-list">
+                                        {fileList.map((file, index) => (
+                                            <li key={index}>{file}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {errors.length > 0 && (
+                        <div className="results show">
+                            <h3>⚠️ Extraction Errors</h3>
+                            <ul className="results-list">
+                                {errors.map((error, index) => (
+                                    <li key={index}>
+                                        Row {error.row || 'N/A'}: {error.reason}
+                                        {error.source ? ` — ${error.source}` : ''}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ResumeExtractor />, document.getElementById('root'));
+    </script>
+</body>
+</html>
